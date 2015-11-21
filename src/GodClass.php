@@ -100,9 +100,6 @@ class GodClass
 
         $this->changeDirectory($folder);
 
-        exec("git config user.name '{$this->githubUser}'");
-        exec("git config user.email '{$this->githubEmail}'");
-
         exec("git remote rm origin");
         exec("git remote add origin git@{$this->githubHost}:{$origin}.git");
         exec("git remote rm upstream");
@@ -150,6 +147,8 @@ class GodClass
      */
     public function pushChanges($branch)
     {
+        exec("git config user.name '{$this->githubUser}'");
+        exec("git config user.email '{$this->githubEmail}'");
         exec("git push -fu origin {$branch}");
     }
 }

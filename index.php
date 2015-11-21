@@ -19,7 +19,6 @@ $go = new SilverStripe\HelpfulRobot\GodClass(
 );
 
 $backupBrain = function() use ($go) {
-    $go->changeDirectory("../");
     $go->commitChanges(".", "Backing up brain");
     $go->pushChanges("master");
 };
