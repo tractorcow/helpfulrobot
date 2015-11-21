@@ -297,4 +297,28 @@ return [
         "license" => "BSD-3-Clause",
         "owner" => "SilverStripe Limited",
     ],
+    [
+        "module" => "docsviewer",
+        "upstream" => "silverstripe/silverstripe-docsviewer",
+        "origin" => "helpfulrobot/silverstripe-docsviewer",
+        "folder" => "silverstripe-docsviewer",
+        "license" => "BSD-3-Clause",
+        "owner" => "SilverStripe Limited",
+    ],
+    [
+        "module" => "siteconfig",
+        "upstream" => "silverstripe/silverstripe-siteconfig",
+        "origin" => "helpfulrobot/silverstripe-siteconfig",
+        "folder" => "silverstripe-siteconfig",
+        "license" => "BSD-3-Clause",
+        "owner" => "SilverStripe Limited",
+    ],
+    [
+        "module" => "sitewidecontent-report",
+        "upstream" => "silverstripe/silverstripe-sitewidecontent-report",
+        "origin" => "helpfulrobot/silverstripe-sitewidecontent-report",
+        "folder" => "silverstripe-sitewidecontent-report",
+        "license" => "BSD-3-Clause",
+        "owner" => "Carlos Barberis",
+    ],
 ];

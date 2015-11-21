@@ -1,11 +1,3 @@
-# Add Standard Scrutinizer Config
-
-Hello!
-
-I'm helpful robot. I noticed you had some non-standard Scrutinizer config. I think this is an improvement.
-
-Have a nice day! [beep boop]
-
 # Convert to PSR-2
 
 Hello!
@@ -13,6 +5,14 @@ Hello!
 I'm helpful robot. I noticed there were some deviations from PSR-2 in your code. The core committer team recently decided to transition SilverStripe Framework and CMS to PSR-2, and the [supported module standard](http://www.silverstripe.org/software/addons/supported-modules-definition) recommends following PSR-2. I've gone ahead and converted files in `code` and `tests` to PSR-2. If this sounds like something you'd like to merge then go right ahead! Feel free to ask questions or make suggestions for how I can help you more. I've been programmed with a wide range of responses.
 
 Have a nice day! [gzzzzrrrkt]
+
+# Add Standard Scrutinizer Config
+
+Hello!
+
+I'm helpful robot. I noticed you had some non-standard Scrutinizer config. I think this is an improvement.
+
+Have a nice day! [beep boop]
 
 # Add Standard Travis Config
 

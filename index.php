@@ -6,7 +6,7 @@ $config = require("config.php");
 $path = realpath("./repositories");
 
 $repositories = array_filter(require("repositories.php"), function($repository) {
-    return true;
+    return false;
 });
 
 $go = new SilverStripe\HelpfulRobot\GodClass(
@@ -40,6 +40,19 @@ $makeRepositories = function() use ($repositories, $go) {
     }
 };
 
+$convertToPsr2 = function() use ($repositories, $go) {
+    foreach ($repositories as $repository) {
+        $go->changeDirectory($repository["folder"]);
+        $go->createBranch("convert-to-psr-2");
+
+        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function code");
+        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function tests");
+
+        $go->commitChanges(".", "Converted to PSR-2");
+        $go->pushChanges("convert-to-psr-2");
+    }
+};
+
 $addStandardScrutinizerConfig = function() use ($path, $repositories, $go) {
     foreach ($repositories as $repository) {
         $folder = $repository["folder"];
@@ -51,19 +64,6 @@ $addStandardScrutinizerConfig = function() use ($path, $repositories, $go) {
 
         $go->commitChanges(".scrutinizer.yml", "Added standard Scrutinizer config");
         $go->pushChanges("add-standard-scrutinizer-config");
-    }
-};
-
-$convertToPsr2 = function() use ($repositories, $go) {
-    foreach ($repositories as $repository) {
-        $go->changeDirectory($repository["folder"]);
-        $go->createBranch("convert-to-psr-2");
-
-        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function code");
-        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function tests");
-
-        $go->commitChanges("-a", "Converted to PSR-2");
-        $go->pushChanges("convert-to-psr-2");
     }
 };
 
@@ -166,3 +166,17 @@ $addStandardCodeOfConduct = function() use ($path, $repositories, $go) {
         $go->pushChanges("add-standard-code-of-conduct");
     }
 };
+
+print_r($repositories);
+exit();
+
+$makeRepositories();
+exit();
+
+$convertToPsr2();
+$addStandardScrutinizerConfig();
+$addStandardTravisConfig();
+$addStandardEditorConfig();
+$addStandardLicense();
+$addStandardGitAttributes();
+$addStandardCodeOfConduct();
