@@ -16,12 +16,14 @@ $branches = [
     "add-standard-code-of-conduct",
 ];
 
+$comparisons = [];
+
 $repositories = array_filter(require("repositories.php"), function($repository) {
     return false;
 });
 
 $go = new SilverStripe\HelpfulRobot\GodClass(
-    new GuzzleHttp\Client(),
+    $client = new GuzzleHttp\Client(),
     $config["github"]["user"],
     $config["github"]["email"],
     $config["github"]["token"],
@@ -37,8 +39,26 @@ $backupBrain = function() use ($go) {
 $backupBrain();
 exit();
 
+$makeRepositories = function() use ($repositories, $go) {
+    foreach ($repositories as $repository) {
+        print "Making local copy of {$repository["folder"]}\n";
+
+        $go->forkRepository($repository["upstream"]);
+
+        sleep(5);
+
+        $go->cloneRepository(
+            $repository["origin"],
+            $repository["upstream"],
+            $repository["folder"]
+        );
+    }
+};
+
 $removeUpstreamBranches = function() use ($branches, $repositories, $go) {
     foreach ($repositories as $repository) {
+        print "Removing upstream branches for {$repository["folder"]}\n";
+
         $go->changeDirectory($repository["folder"]);
 
         $response = $go->request(
@@ -53,42 +73,34 @@ $removeUpstreamBranches = function() use ($branches, $repositories, $go) {
 
             if (!in_array($name, $branches)) {
                 print "delete {$name} on {$repository["module"]}\n";
-                exec("git branch -D {$name}");
-                exec("git push origin :refs/heads/{$name}");
+                exec("git branch -D {$name} 2> /dev/null");
+                exec("git push origin :refs/heads/{$name} 2> /dev/null");
             }
         }
     }
 };
 
-$makeRepositories = function() use ($repositories, $go) {
+$convertToPsr2 = function() use ($repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
-        $go->forkRepository($repository["upstream"]);
+        print "Converting {$repository["folder"]} to PSR-2\n";
 
-        sleep(5);
-
-        $go->cloneRepository(
-            $repository["origin"],
-            $repository["upstream"],
-            $repository["folder"]
-        );
-    }
-};
-
-$convertToPsr2 = function() use ($repositories, $go) {
-    foreach ($repositories as $repository) {
         $go->changeDirectory($repository["folder"]);
         $go->createBranch("convert-to-psr-2");
 
-        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function code");
-        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function tests");
+        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function code 2> /dev/null");
+        exec("php-cs-fixer fix --level=psr2 --fixers=-psr0,-join_function tests 2> /dev/null");
 
         $go->commitChanges(".", "Converted to PSR-2");
         $go->pushChanges("convert-to-psr-2");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:convert-to-psr-2";
     }
 };
 
-$addStandardScrutinizerConfig = function() use ($path, $repositories, $go) {
+$addStandardScrutinizerConfig = function() use ($path, $repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
+        print "Adding standard Scrutinizer config to {$repository["folder"]}\n";
+
         $folder = $repository["folder"];
 
         $go->changeDirectory($folder);
@@ -98,27 +110,68 @@ $addStandardScrutinizerConfig = function() use ($path, $repositories, $go) {
 
         $go->commitChanges(".scrutinizer.yml", "Added standard Scrutinizer config");
         $go->pushChanges("add-standard-scrutinizer-config");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:add-standard-scrutinizer-config";
     }
 };
 
-$addStandardTravisConfig = function() use ($path, $repositories, $go) {
+$addStandardTravisConfig = function() use ($path, $repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
+        print "Adding standard Travis config to {$repository["folder"]}\n";
+
         $folder = $repository["folder"];
 
         $go->changeDirectory($folder);
         $go->createBranch("add-standard-travis-config");
 
-        $contents = file_get_contents(realpath(__DIR__ . "/templates/.travis.yml"));
+        $file = realpath(__DIR__ . "/templates/travis-3.1.yml");
+
+        $composer = file_get_contents("{$path}/{$folder}/composer.json");
+        $composer = json_decode($composer, true);
+
+        if (isset($composer["require"])) {
+            $require = $composer["require"];
+
+            if (isset($require["silverstripe/cms"])) {
+                $version = $require["silverstripe/cms"];
+
+                if ($version == "~3.2" || $version == "^3.2") {
+                    $file = realpath(__DIR__ . "/templates/travis-3.2.yml");
+                }
+
+                if ($version == "~4.0" || $version == "^4.0") {
+                    $file = realpath(__DIR__ . "/templates/travis-4.0.yml");
+                }
+            }
+
+            if (isset($require["silverstripe/framework"])) {
+                $version = $require["silverstripe/framework"];
+
+                if ($version == "~3.2" || $version == "^3.2") {
+                    $file = realpath(__DIR__ . "/templates/travis-3.2.yml");
+                }
+
+                if ($version == "~4.0" || $version == "^4.0") {
+                    $file = realpath(__DIR__ . "/templates/travis-4.0.yml");
+                }
+            }
+        }
+
+        $contents = file_get_contents($file);
         $contents = str_replace("{module}", $repository["module"], $contents);
         file_put_contents("{$path}/{$folder}/.travis.yml", $contents);
 
         $go->commitChanges(".travis.yml", "Added standard Travis config");
         $go->pushChanges("add-standard-travis-config");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:add-standard-travis-config";
     }
 };
 
-$addStandardEditorConfig = function() use ($path, $repositories, $go) {
+$addStandardEditorConfig = function() use ($path, $repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
+        print "Adding standard editor config to {$repository["folder"]}\n";
+
         $folder = $repository["folder"];
 
         $go->changeDirectory($folder);
@@ -128,20 +181,24 @@ $addStandardEditorConfig = function() use ($path, $repositories, $go) {
 
         $go->commitChanges(".editorconfig", "Added standard editor config");
         $go->pushChanges("add-standard-editor-config");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:add-standard-editor-config";
     }
 };
 
-$addStandardLicense = function() use ($path, $repositories, $go) {
+$addStandardLicense = function() use ($path, $repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
+        print "Adding standard license to {$repository["folder"]}\n";
+
         $folder = $repository["folder"];
 
         $go->changeDirectory($folder);
         $go->createBranch("add-standard-license");
 
-        exec("rm -f $(ls | grep -i '^license\.md')");
-        exec("rm -f $(ls | grep -i '^license')");
-        exec("rm -f $(ls | grep -i '^licence\.md')");
-        exec("rm -f $(ls | grep -i '^licence')");
+        exec("rm -f $(ls | grep -i '^license\.md') 2> /dev/null");
+        exec("rm -f $(ls | grep -i '^license') 2> /dev/null");
+        exec("rm -f $(ls | grep -i '^licence\.md') 2> /dev/null");
+        exec("rm -f $(ls | grep -i '^licence') 2> /dev/null");
 
         $file = realpath(__DIR__) . "/templates/license-mit.md";
         $license = $repository["license"];
@@ -165,16 +222,20 @@ $addStandardLicense = function() use ($path, $repositories, $go) {
 
         if (!isset($json["license"]) || $json["license"] != $license) {
             print "The license should be: {$license}\n";
-            exec("atom --wait --new-window composer.json");
+            exec("atom --wait --new-window composer.json 2> /dev/null");
         }
 
         $go->commitChanges(".", "Added standard license");
         $go->pushChanges("add-standard-license");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:add-standard-license";
     }
 };
 
-$addStandardGitAttributes = function() use ($path, $repositories, $go) {
+$addStandardGitAttributes = function() use ($path, $repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
+        print "Adding standard Git attributes to {$repository["folder"]}\n";
+
         $folder = $repository["folder"];
 
         $go->changeDirectory($folder);
@@ -184,11 +245,15 @@ $addStandardGitAttributes = function() use ($path, $repositories, $go) {
 
         $go->commitChanges(".gitattributes", "Added standard git attributes");
         $go->pushChanges("add-standard-git-attributes");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:add-standard-git-attributes";
     }
 };
 
-$addStandardCodeOfConduct = function() use ($path, $repositories, $go) {
+$addStandardCodeOfConduct = function() use ($path, $repositories, $go, &$comparisons, $config) {
     foreach ($repositories as $repository) {
+        print "Adding standard code of conduct to {$repository["folder"]}\n";
+
         $folder = $repository["folder"];
 
         $go->changeDirectory($folder);
@@ -198,6 +263,8 @@ $addStandardCodeOfConduct = function() use ($path, $repositories, $go) {
 
         $go->commitChanges("code-of-conduct.md", "Added standard code of conduct");
         $go->pushChanges("add-standard-code-of-conduct");
+
+        $comparisons[] = "https://github.com/{$repository["upstream"]}/compare/master...{$config["github"]["user"]}:add-standard-code-of-conduct";
     }
 };
 
@@ -232,6 +299,23 @@ $addStandardEditorConfig();
 $addStandardLicense();
 $addStandardGitAttributes();
 $addStandardCodeOfConduct();
+
+foreach ($comparisons as $comparison) {
+    $response = $client->request("GET", $comparison);
+
+    $body = (string) $response->getBody();
+
+    if (stristr($body, "View pull request")) {
+        return;
+    }
+
+    if (stristr($body, "Nothing to show")) {
+        return;
+    }
+
+    print $comparison;
+}
+
 exit();
 
 $getRepositoriesForOrganisation("silverstripe");

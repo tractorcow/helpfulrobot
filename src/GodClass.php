@@ -95,15 +95,18 @@ class GodClass
      */
     public function cloneRepository($origin, $upstream, $folder)
     {
-        exec("rm -rf {$this->repositoryPath}/{$folder}");
-        exec("git clone git@{$this->githubHost}:{$origin}.git {$this->repositoryPath}/{$folder}");
+        exec("rm -rf {$this->repositoryPath}/{$folder} 2> /dev/null");
+        exec("git clone git@{$this->githubHost}:{$origin}.git {$this->repositoryPath}/{$folder} 2> /dev/null");
 
         $this->changeDirectory($folder);
 
-        exec("git remote rm origin");
-        exec("git remote add origin git@{$this->githubHost}:{$origin}.git");
-        exec("git remote rm upstream");
-        exec("git remote add upstream git@{$this->githubHost}:{$upstream}.git");
+        exec("git config user.name '{$this->githubUser}' 2> /dev/null");
+        exec("git config user.email '{$this->githubEmail}' 2> /dev/null");
+
+        exec("git remote rm origin 2> /dev/null");
+        exec("git remote add origin git@{$this->githubHost}:{$origin}.git 2> /dev/null");
+        exec("git remote rm upstream 2> /dev/null");
+        exec("git remote add upstream git@{$this->githubHost}:{$upstream}.git 2> /dev/null");
     }
 
     /**
@@ -122,22 +125,22 @@ class GodClass
      */
     public function createBranch($target, $source = "master")
     {
-        exec("git fetch upstream");
-        exec("git checkout upstream/{$source}");
-        exec("git branch -D {$target}");
-        exec("git checkout -b {$target}");
+        exec("git fetch upstream 2> /dev/null");
+        exec("git checkout upstream/{$source} 2> /dev/null");
+        exec("git branch -D {$target} 2> /dev/null");
+        exec("git checkout -b {$target} 2> /dev/null");
     }
 
     /**
-     * Commits changes to files, in the format "file1.txt file2.txt".
+     * Commits changes to files, in the format "file1.txt file2.txt" or "-a".
      *
      * @param string $files
      * @param string $message
      */
     public function commitChanges($files, $message)
     {
-        exec("git add {$files}");
-        exec("git commit {$files} -m '{$message}'");
+        exec("git add {$files} 2> /dev/null");
+        exec("git commit {$files} -m '{$message}' 2> /dev/null");
     }
 
     /**
@@ -147,8 +150,6 @@ class GodClass
      */
     public function pushChanges($branch)
     {
-        exec("git config user.name '{$this->githubUser}'");
-        exec("git config user.email '{$this->githubEmail}'");
-        exec("git push -fu origin {$branch}");
+        exec("git push -fu origin {$branch} 2> /dev/null");
     }
 }
