@@ -72,7 +72,7 @@ $removeUpstreamBranches = function() use ($branches, $repositories, $go) {
             $name = $branch["name"];
 
             if (!in_array($name, $branches)) {
-                print "delete {$name} on {$repository["module"]}\n";
+                print "Deleting branch {$name}\n";
                 exec("git branch -D {$name} 2> /dev/null");
                 exec("git push origin :refs/heads/{$name} 2> /dev/null");
             }
@@ -300,22 +300,7 @@ $addStandardLicense();
 $addStandardGitAttributes();
 $addStandardCodeOfConduct();
 
-foreach ($comparisons as $comparison) {
-    $response = $client->request("GET", $comparison);
-
-    $body = (string) $response->getBody();
-
-    if (stristr($body, "View pull request")) {
-        return;
-    }
-
-    if (stristr($body, "Nothing to show")) {
-        return;
-    }
-
-    print $comparison;
-}
-
+print_r($comparisons);
 exit();
 
 $getRepositoriesForOrganisation("silverstripe");
