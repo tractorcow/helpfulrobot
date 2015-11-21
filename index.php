@@ -6,7 +6,7 @@ $config = require("config.php");
 $path = realpath("./repositories");
 
 $repositories = array_filter(require("repositories.php"), function($repository) {
-    return $repository["upstream"] == "silverstripe/fluent-regional";
+    return true;
 });
 
 $go = new SilverStripe\HelpfulRobot\GodClass(
