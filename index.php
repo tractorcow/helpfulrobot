@@ -5,6 +5,17 @@ require("vendor/autoload.php");
 $config = require("config.php");
 $path = realpath("./repositories");
 
+$branches = [
+    "master",
+    "convert-to-psr-2",
+    "add-standard-scrutinizer-config",
+    "add-standard-travis-config",
+    "add-standard-editor-config",
+    "add-standard-license",
+    "add-standard-git-attributes",
+    "add-standard-code-of-conduct",
+];
+
 $repositories = array_filter(require("repositories.php"), function($repository) {
     return false;
 });
@@ -25,6 +36,29 @@ $backupBrain = function() use ($go) {
 
 $backupBrain();
 exit();
+
+$removeUpstreamBranches = function() use ($branches, $repositories, $go) {
+    foreach ($repositories as $repository) {
+        $go->changeDirectory($repository["folder"]);
+
+        $response = $go->request(
+            "GET", "repos/{$repository["origin"]}/branches"
+        );
+
+        $body = (string) $response->getBody();
+        $json = json_decode($body, true);
+
+        foreach ($json as $branch) {
+            $name = $branch["name"];
+
+            if (!in_array($name, $branches)) {
+                print "delete {$name} on {$repository["module"]}\n";
+                exec("git branch -D {$name}");
+                exec("git push origin :refs/heads/{$name}");
+            }
+        }
+    }
+};
 
 $makeRepositories = function() use ($repositories, $go) {
     foreach ($repositories as $repository) {
@@ -167,10 +201,28 @@ $addStandardCodeOfConduct = function() use ($path, $repositories, $go) {
     }
 };
 
+$getRepositoriesForOrganisation = function($organisation) use ($repositories, $go) {
+    $response = $go->request("GET", "orgs/{$organisation}/repos?type=public&per_page=1000");
+
+    $body = (string) $response->getBody();
+    $json = json_decode($body, true);
+
+    $names = array_map(function($repository) {
+        return $repository["upstream"];
+    }, $repositories);
+
+    foreach ($json as $remote) {
+        if (!in_array($remote["full_name"], $names)) {
+            print "untouched repository: {$remote["full_name"]}\n";
+        }
+    }
+};
+
 print_r($repositories);
 exit();
 
 $makeRepositories();
+$removeUpstreamBranches();
 exit();
 
 $convertToPsr2();
@@ -180,3 +232,9 @@ $addStandardEditorConfig();
 $addStandardLicense();
 $addStandardGitAttributes();
 $addStandardCodeOfConduct();
+exit();
+
+$getRepositoriesForOrganisation("silverstripe");
+$getRepositoriesForOrganisation("silverstripe-labs");
+$getRepositoriesForOrganisation("open-sausages");
+exit();
